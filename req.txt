@@ -1,0 +1,277 @@
+1. FRONT-END (Single HTML Page) – 10 marks
+✔ Required Features (must appear on the page, using modals or sections)
+
+Registration form (fields + submit)
+
+Login form
+
+User feed section (shows posts only from followed users)
+
+Search section
+
+Search users
+
+Search posts/contents
+
+Post creation area (write/post text)
+
+Follow/unfollow buttons
+
+Profile picture upload (if doing file upload)
+
+✔ Design Rules
+
+Must be one HTML file only
+
+Use HTML + CSS + JavaScript (Vanilla)
+
+Allowed frameworks: Bootstrap, Foundation, or jQuery
+
+NOT allowed: React, Vue, Angular
+
+No alerts → use inline messages or modals
+
+✔ To get full 7.5 + 2.5 marks
+
+Modern attractive design with consistent Bootstrap styling
+
+Polished usability: no broken links/buttons, all sections reachable
+
+Clear layout (Feed in centre, search on top, post modal, etc.)
+
+Professional CSS styling
+
+2. WEB SERVICE (Node.js + Express) – around 25 marks
+
+All your API endpoints must start with your student ID, e.g.:
+
+http://localhost:8080/M01028026/users
+
+✔ USER REGISTRATION
+
+POST /{ID}/users
+Receive JSON
+Insert into MongoDB
+Return JSON result
+
+✔ USER SEARCH
+GET /{ID}/users?q=xxx
+Query param required
+Return JSON list from MongoDB
+
+✔ LOGIN SYSTEM
+GET /{ID}/login → return login status
+POST /{ID}/login → check credentials in MongoDB
+DELETE /{ID}/login → logout user
+
+✔ SESSION MANAGEMENT
+
+Must use Express-session OR JWT OR custom cookie
+Must protect:
+GET login
+DELETE login
+POST contents
+POST follow
+DELETE follow
+GET feed
+Must not send userID through request body for these.
+
+✔ SOCIAL NETWORKING
+POST /{ID}/contents
+Store post text in MongoDB
+
+GET /{ID}/contents?q=xxx
+
+Search content by keywords
+
+POST /{ID}/follow or /{ID}/follow/:userid
+
+Store in MongoDB
+
+DELETE /{ID}/follow or /{ID}/follow/:userid
+
+Remove follow relationship
+
+GET /{ID}/feed
+
+Must ONLY show content from followed users
+
+NOT from all users
+
+3. AJAX FUNCTIONALITY – 12 marks
+
+For every feature, front end must use fetch() or XMLHttpRequest() to interact with your API.
+
+✔ AJAX Required For:
+
+Register user
+
+Login user
+
+Create/post content
+
+Follow/unfollow user
+
+View feed (only from followed users)
+
+Search users
+
+Search contents
+
+Display success/error messages on page
+
+4. IMAGES / FILE UPLOAD – 6 marks
+
+Use multer to upload files.
+
+✔ Must Implement:
+
+POST /{ID}/upload (or similar)
+
+File stored on server filesystem
+
+Return JSON with file URL
+
+Front end must:
+
+Upload image via AJAX
+
+Display uploaded image / allow file download
+
+5. THIRD-PARTY DATA – 5 to 10 marks
+
+This is where you can gain easy marks.
+
+✔ Minimum 5 marks:
+
+Weather API, Quote API, Image API, etc.
+
+Server downloads the data (not client)
+
+Expose via endpoint like:
+
+GET /{ID}/weather
+
+
+Display it on the page
+
+✔ For full 10 marks:
+
+Use something more advanced e.g.:
+
+AI-generated post suggestions/summary
+
+Multiple API calls (e.g., weather + news)
+
+Chatbot (OpenAI API)
+
+6. ADVANCED FUNCTIONALITY – up to 10 marks
+
+To maximize marks, include at least 3 advanced features.
+
+✔ Highly scoring ideas:
+
+Friend requests with accept/reject
+
+Direct messaging between users (asynchronous chat system)
+
+Live notifications (long polling / setInterval)
+
+Profile editing (bio, profile image, etc.)
+
+Sorting feed by relevance/time
+
+Pagination for posts
+
+User recommendation system (e.g., mutual follows)
+
+Aim for at least 7/10 by adding 3–4 of these.
+
+7. CODE QUALITY – 10 marks
+✔ Required
+
+Appropriate comments in HTML, CSS, JS
+
+No commented-out code
+
+Clean, formatted code
+
+Folder structure:
+
+/css
+
+/js
+
+/images
+
+/server (optional)
+
+No unused files
+
+8. DATABASE DUMP – 5 marks
+
+Must include:
+
+JSON or BSON
+
+All collections (users, content, follows, sessions, etc.)
+
+Not allowed: CSV, raw db files.
+
+9. PROJECT REPORT – 10 marks
+✔ Must include:
+
+Screenshots of Postman/Thunder Client
+
+Showing every API endpoint working
+
+Screenshots of every front-end feature
+
+Description of everything (max ~2500 words)
+
+Clean formatting
+
+Cover page
+
+Correct spelling & grammar
+
+Justified paragraphs
+
+⭐ SUMMARY: Features Needed for Maximum Marks
+Must-Have Core Features
+
+Registration
+
+Login + session management
+
+Create posts
+
+Follow/unfollow
+
+Feed showing only followed users
+
+Search users + search posts
+
+Image upload + display
+
+Third-party API integration
+
+Attractive, single-page Bootstrap UI
+
+AJAX everywhere (no page reloads)
+
+To Reach Top Band (90%+)
+
+Add advanced functionality:
+
+Friend request system
+
+Direct messaging
+
+Profile editing
+
+Interactive notifications
+
+Recommendation engine
+
+Feed sorting
