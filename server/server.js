@@ -22,7 +22,8 @@ let db, usersCollection;
   console.log("MongoDB connected");
 })();
 
-//*********************************************** Registration API ********************************************
+//*********************************************** Registration API *******************************************
+
 
 app.post("/M01028026/users", async (req, res) => {
   try {
@@ -118,6 +119,137 @@ app.get("/M01028026/users", async (req, res) => {
     });
   }
 });
+
+//*********************************************** Login API ********************************************
+let sessions = {};
+app.post("/M01028026/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validation
+    if (!email || !password) {
+      return res.json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    // Find user in DB
+    const user = await usersCollection.findOne({ email });
+
+    if (!user) {
+      return res.json({
+        success: false,
+        message: "Please register first",
+      });
+    }
+
+    // Check password (plain text for now)
+    if (user.password !== password) {
+      return res.json({
+        success: false,
+        message: "Incorrect password",
+      });
+    }
+
+    // Create simple session ID (string)
+    const sessionId = Math.random().toString(36).substring(2);
+
+    // Store session
+    sessions[sessionId] = {
+      userId: user._id,
+      email: user.email,
+      name: user.name,
+      loginTime: new Date(),
+    };
+
+    // Return success + session token
+    res.json({
+      success: true,
+      message: "Login successful",
+      sessionId: sessionId, // frontend must save this
+      user: {
+        name: user.name,
+        email: user.email,
+        university: user.university,
+      },
+    });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+});
+
+app.get("/M01028026/login", (req, res) => {
+  const { sessionId } = req.query;
+
+  // If no sessionId provided
+  if (!sessionId) {
+    return res.json({
+      loggedIn: false,
+      message: "No session ID provided",
+    });
+  }
+
+  // Check if valid session
+  if (!sessions[sessionId]) {
+    return res.json({
+      loggedIn: false,
+      message: "Session expired or invalid",
+    });
+  }
+
+  // User is logged in
+  res.json({
+    loggedIn: true,
+    user: sessions[sessionId],
+  });
+});
+
+app.delete("/M01028026/login", (req, res) => {
+  try {
+    const { sessionId } = req.query;
+
+    // No session ID provided
+    if (!sessionId) {
+      return res.json({
+        success: false,
+        message: "No session ID provided",
+      });
+    }
+
+    // Check if session exists
+    if (!sessions[sessionId]) {
+      return res.json({
+        success: false,
+        message: "Session already expired or invalid",
+      });
+    }
+
+    // Remove session
+    delete sessions[sessionId];
+
+    res.json({
+      success: true,
+      message: "Logged out successfully",
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message
+    });
+  }
+});
+
+
+
 
 // last
 app.listen(PORT, () => {
