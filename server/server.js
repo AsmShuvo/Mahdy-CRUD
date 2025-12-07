@@ -7,23 +7,22 @@ const { MongoClient } = require("mongodb");
 app.use(cors());
 app.use(express.json());
 
-
-
 const uri = `mongodb://localhost:27017/UniConnectDB`;
 const client = new MongoClient(uri);
 
 // database + collection
-let db, usersCollection;
+let db, usersCollection, postsCollection, followsCollection;
 
 (async () => {
   await client.connect();
   db = client.db("uniconnect");
   usersCollection = db.collection("users");
+  postsCollection = db.collection("posts");
+  followsCollection = db.collection("follows");
   console.log("MongoDB connected");
 })();
 
 //*********************************************** Registration API *******************************************
-
 
 app.post("/M01028026/users", async (req, res) => {
   try {
@@ -43,7 +42,7 @@ app.post("/M01028026/users", async (req, res) => {
       });
     }
 
-    if(userData.password != userData.confirmPassword){
+    if (userData.password != userData.confirmPassword) {
       return res.json({
         success: false,
         message: "Passwords don't match",
@@ -65,13 +64,13 @@ app.post("/M01028026/users", async (req, res) => {
       email: userData.email,
       password: userData.password, // todo: hash later
       university: userData.university || "",
-      createdAt: new Date(), //current date added 
+      createdAt: new Date(), //current date added
     });
 
     res.json({
       success: true,
       message: "User registered successfully",
-      // userId: result.insertedId,
+      userId: result.insertedId,
     });
   } catch (err) {
     res.status(500).json({
@@ -122,6 +121,32 @@ app.get("/M01028026/users", async (req, res) => {
 
 //*********************************************** Login API ********************************************
 let sessions = {};
+
+// Middleware to protect routes (requires login)
+function requireLogin(req, res, next) {
+  const { sessionId } = req.query;
+
+  if (!sessionId) {
+    return res.status(401).json({
+      success: false,
+      message: "No session ID provided. Please log in first.",
+    });
+  }
+
+  const sessionUser = sessions[sessionId];
+
+  if (!sessionUser) {
+    return res.status(401).json({
+      success: false,
+      message: "Session expired or invalid. Please log in again.",
+    });
+  }
+
+  // Attach user info from session
+  req.user = sessionUser;
+  next();
+}
+
 app.post("/M01028026/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -160,6 +185,7 @@ app.post("/M01028026/login", async (req, res) => {
       userId: user._id,
       email: user.email,
       name: user.name,
+      university: user.university,
       loginTime: new Date(),
     };
 
@@ -174,7 +200,6 @@ app.post("/M01028026/login", async (req, res) => {
         university: user.university,
       },
     });
-
   } catch (err) {
     console.log(err);
     res.status(500).json({
@@ -238,18 +263,231 @@ app.delete("/M01028026/login", (req, res) => {
       success: true,
       message: "Logged out successfully",
     });
-
   } catch (err) {
     res.status(500).json({
       success: false,
       message: "Server error",
-      error: err.message
+      error: err.message,
+    });
+  }
+});
+
+// ****************************** CONTENT *********************************
+
+app.post("/M01028026/contents", requireLogin, async (req, res) => {
+  try {
+    const postData = req.body;
+
+    // Expecting from body: { title, description }
+    if (!postData.title || !postData.description) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: title, description",
+      });
+    }
+
+    // User info from session (set by requireLogin)
+    const sessionUser = req.user;
+
+    // Build post document according to your schema
+    const blog = {
+      title: postData.title,
+      description: postData.description,
+      likes: 0, // default likes
+      comments: [], // empty array initially
+      posted: new Date(), // current date-time
+      author: {
+        name: sessionUser.name,
+        university: sessionUser.university,
+        email: sessionUser.email,
+      },
+    };
+
+    // Insert into MongoDB
+    const result = await postsCollection.insertOne(blog);
+
+    return res.json({
+      success: true,
+      message: "Post created successfully",
+      // postId: result.insertedId,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+});
+
+app.get("/M01028026/contents", async (req, res) => {
+  try {
+    const q = req.query.q;
+
+    // Validate query
+    if (!q) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing query parameter",
+      });
+    }
+
+    // Search posts by title or description (case-insensitive)
+    const results = await postsCollection
+      .find({
+        $or: [
+          { title: { $regex: q, $options: "i" } },
+          { description: { $regex: q, $options: "i" } },
+          { "author.name": { $regex: q, $options: "i" } },
+          { "author.university": { $regex: q, $options: "i" } },
+        ],
+      })
+      .sort({ posted: -1 }) // newest first
+      .toArray();
+
+    return res.json({
+      success: true,
+      // count: results.length,
+      results,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+});
+
+// ************** follow api *********************
+
+app.post("/M01028026/follow", requireLogin, async (req, res) => {
+  try {
+    const curUser = req.user; // mahdy
+    const { targetEmail } = req.body; // shuvo@gmail.com
+
+    // Check that target user exists
+    const targetUser = await usersCollection.findOne({ email: targetEmail });
+    if (!targetUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User to follow not found",
+      });
+    }
+
+    // Check if already following
+    const existingFollow = await followsCollection.findOne({
+      followerEmail: curUser.email,
+      followingEmail: targetEmail,
+    });
+
+    if (existingFollow) {
+      return res.json({
+        success: true,
+        message: "You are already following this user",
+      });
+    }
+
+    // Insert follow document
+    await followsCollection.insertOne({
+      followerEmail: curUser.email,
+      followingEmail: targetEmail,
+      followedAt: new Date(),
+    });
+
+    res.json({
+      success: true,
+      message: `Now following ${targetEmail}`,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
     });
   }
 });
 
 
+app.delete("/M01028026/follow", requireLogin, async (req, res) => {
+  try {
+    const sessionUser = req.user;
+    const { targetEmail } = req.body;
 
+    if (!targetEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "targetEmail is required",
+      });
+    }
+
+    const result = await followsCollection.deleteOne({
+      followerEmail: sessionUser.email,
+      followingEmail: targetEmail,
+    });
+
+    if (result.deletedCount === 0) {
+      return res.json({
+        success: false,
+        message: "Couldn't find data",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Unfollowed successfully`,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+});
+
+app.get("/M01028026/feed", requireLogin, async (req, res) => {
+  try {
+    const sessionUser = req.user;
+
+    // Find all users that current user is following
+    const follows = await followsCollection
+      .find({ followerEmail: sessionUser.email })
+      .toArray();
+
+    const followingEmails = follows.map((f) => f.followingEmail);
+
+    if (followingEmails.length === 0) {
+      return res.json({
+        success: true,
+        feed: [],
+        message: "You are not following anyone yet",
+      });
+    }
+
+    // Get posts only from followed users
+    const feedPosts = await postsCollection
+      .find({ "author.email": { $in: followingEmails } })
+      .sort({ posted: -1 })
+      .toArray();
+
+    res.json({
+      success: true,
+      feed: feedPosts,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+});
 
 // last
 app.listen(PORT, () => {
